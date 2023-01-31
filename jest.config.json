@@ -1,0 +1,6 @@
+{
+  "testEnvironment": "node",
+  "setupFilesAfterEnv": ["jest-extended/all"],
+  "restoreMocks": true,
+  "testTimeout": 50000
+}

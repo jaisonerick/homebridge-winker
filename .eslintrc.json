@@ -1,0 +1,58 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "extends": ["eslint:recommended", "plugin:jest/recommended", "prettier"],
+  "parserOptions": {
+    "ecmaVersion": 2018,
+    "sourceType": "module",
+    "project": ["./tsconfig.json"]
+  },
+  "ignorePatterns": ["dist"],
+  "rules": {
+    "quotes": ["warn", "single"],
+    "indent": ["warn", 2, { "SwitchCase": 1 }],
+    "semi": ["off"],
+    "comma-dangle": ["warn", "always-multiline"],
+    "dot-notation": "off",
+    "eqeqeq": "warn",
+    "curly": ["warn", "all"],
+    "brace-style": ["warn"],
+    "prefer-arrow-callback": ["warn"],
+    "max-len": ["warn", 140],
+    "no-console": ["warn"],
+    "no-non-null-assertion": ["off"],
+    "comma-spacing": ["error"],
+    "no-multi-spaces": ["warn", { "ignoreEOLComments": true }],
+    "no-trailing-spaces": ["warn"],
+    "lines-between-class-members": [
+      "warn",
+      "always",
+      { "exceptAfterSingleLine": true }
+    ],
+    "no-await-in-loop": "off"
+  },
+  "overrides": [
+    {
+      "files": ["*.ts"],
+      "extends": [
+        "plugin:@typescript-eslint/recommended",
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended-requiring-type-checking"
+      ],
+      "rules": {
+        "no-unused-vars": "off",
+        "@typescript-eslint/explicit-function-return-type": "off",
+        "@typescript-eslint/no-non-null-assertion": "off",
+        "@typescript-eslint/explicit-module-boundary-types": "off",
+        "@typescript-eslint/semi": ["warn"],
+        "@typescript-eslint/member-delimiter-style": ["warn"],
+        "@typescript-eslint/require-await": "off"
+      }
+    },
+    {
+      "files": ["*.test.{js,ts}"],
+      "env": {
+        "jest": true
+      }
+    }
+  ]
+}
