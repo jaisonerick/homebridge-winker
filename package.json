@@ -28,6 +28,7 @@
     "test": "npm run lint && npm run test:coverage",
     "watch": "npm run build && nodemon",
     "build": "npm run test && rimraf ./dist && tsc",
+    "autofix": "eslint --cache src --fix",
     "prepublishOnly": "npm run test && npm run build"
   },
   "keywords": [
@@ -53,6 +54,13 @@
     "prettier": "^2.8.3",
     "rimraf": "^3.0.2",
     "ts-node": "^10.3.0",
-    "typescript": "^4.4.4"
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "@zodios/core": "^10.7.5",
+    "@zodios/plugins": "^10.5.0",
+    "axios": "^1.2.6",
+    "axios-retry": "^3.4.0",
+    "zod": "^3.20.2"
   }
 }

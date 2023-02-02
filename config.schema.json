@@ -5,13 +5,26 @@
   "schema": {
     "type": "object",
     "properties": {
-      "name": {
-        "title": "Name",
+      "username": {
+        "title": "Username",
         "type": "string",
-        "required": true,
-        "default": "Example Dynamic Platform"
+        "required": true
+      },
+      "password": {
+        "title": "Password",
+        "type": "string",
+        "required": true
+      },
+      "clientKey": {
+        "title": "Client Key",
+        "type": "string",
+        "required": true
+      },
+      "portal": {
+        "title": "Portal",
+        "type": "number",
+        "required": true
       }
     }
   }
 }
-

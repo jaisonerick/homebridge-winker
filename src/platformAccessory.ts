@@ -80,21 +80,21 @@ export class WinkerPlatformAccessory {
      */
 
     // Example: add two "motion sensor" services to the accessory
-    const motionSensorOneService =
-      this.accessory.getService('Motion Sensor One Name') ||
-      this.accessory.addService(
-        this.platform.Service.MotionSensor,
-        'Motion Sensor One Name',
-        'YourUniqueIdentifier-1',
-      );
+    // const motionSensorOneService =
+    //   this.accessory.getService('Motion Sensor One Name') ||
+    //   this.accessory.addService(
+    //     this.platform.Service.MotionSensor,
+    //     'Motion Sensor One Name',
+    //     'YourUniqueIdentifier-1',
+    //   );
 
-    const motionSensorTwoService =
-      this.accessory.getService('Motion Sensor Two Name') ||
-      this.accessory.addService(
-        this.platform.Service.MotionSensor,
-        'Motion Sensor Two Name',
-        'YourUniqueIdentifier-2',
-      );
+    // const motionSensorTwoService =
+    //   this.accessory.getService('Motion Sensor Two Name') ||
+    //   this.accessory.addService(
+    //     this.platform.Service.MotionSensor,
+    //     'Motion Sensor Two Name',
+    //     'YourUniqueIdentifier-2',
+    //   );
 
     /**
      * Updating characteristics values asynchronously.

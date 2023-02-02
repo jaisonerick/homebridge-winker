@@ -8,3 +8,4 @@ export const PLATFORM_NAME = 'HomebridgeWinker';
  */
 export const PLUGIN_NAME = 'homebridge-winker';
 
+export const BASE_URL = 'https://api.winker.com.br/v1/';
