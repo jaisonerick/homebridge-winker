@@ -1,6 +1,6 @@
 {
-  "watch": ["src"],
-  "ext": "ts",
+  "watch": ["src", ".homebridge/config.json"],
+  "ext": "ts, json",
   "ignore": ["**/*.spec.js"],
   "exec": "tsc && homebridge -I -D -U ./.homebridge -P .",
   "signal": "SIGTERM",

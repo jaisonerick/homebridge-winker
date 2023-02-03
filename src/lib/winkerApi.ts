@@ -1,8 +1,11 @@
-import { z } from 'zod';
+import { object, z } from 'zod';
 import { makeApi, Zodios, ZodiosPlugin } from '@zodios/core';
 import { BASE_URL } from '../settings';
 import { Session } from './Session';
 import { pluginApi } from '@zodios/plugins';
+import { AxiosError } from 'axios';
+
+export class ThrottleError extends Error {}
 
 export const login = z.object({
   token: z.string(),
@@ -41,6 +44,7 @@ export type Portal = z.infer<typeof portal>;
 
 export const fullPortal = z.object({
   portal: z.object({
+    name: z.string(),
     units_with_user_responsible: z.array(
       z.object({
         id_user_unit: z.number(),
@@ -77,6 +81,53 @@ export const portalApi = makeApi([
   },
 ]);
 
+export const device = z.object({
+  id_device: z.string(),
+  name_device: z.string(),
+  state: z.enum(['OPEN', 'CLOSED']),
+  event: z.string(),
+  version: z.string(),
+});
+
+export type Device = z.infer<typeof device>;
+
+export const deviceApi = makeApi([
+  {
+    method: 'get',
+    path: 'access-control/user/devices',
+    alias: 'getDevices',
+    description: 'Get all devices for a portal',
+    response: z.array(device),
+    parameters: [
+      {
+        name: 'id_portal',
+        type: 'Query',
+        schema: z.number(),
+      },
+    ],
+  },
+  {
+    method: 'post',
+    path: 'access-control/user/device/open',
+    alias: 'openDevice',
+    description: 'Open a specific device',
+    response: z.any(),
+    parameters: [
+      {
+        name: 'body',
+        type: 'Body',
+        schema: z.object({
+          device: z.object({
+            id_device: z.string(),
+            state: z.enum(['OPEN', 'CLOSED']),
+          }),
+          id_portal: z.number(),
+        }),
+      },
+    ],
+  },
+]);
+
 function pluginApiKey(provider: {
   getToken: () => Promise<string | undefined>;
 }): ZodiosPlugin {
@@ -101,34 +152,75 @@ function pluginApiKey(provider: {
   };
 }
 
-type Logger = Pick<typeof console, 'debug'>;
-
-function pluginLogger(provider: Logger): ZodiosPlugin {
+function pluginErrorHandler(): ZodiosPlugin {
   return {
-    request: async (_, config) => {
-      provider.debug(
-        `[WinkerAPI] Request ${config.method} ${config.baseURL || ''}${
-          config.url
-        }`,
-      );
-      return config;
-    },
-    response: async (_, config, response) => {
-      provider.debug(
-        `[WinkerAPI] Response ${config.method} ${config.baseURL || ''}${
-          config.url
-        }`,
-      );
-      return response;
+    error: async (_api, _config, error) => {
+      if (error instanceof AxiosError) {
+        if (error.response && error.response.status === 400) {
+          return Promise.reject(new ThrottleError());
+        }
+      }
+      return Promise.reject(error);
     },
   };
 }
 
-export const winkerApi = new Zodios(BASE_URL, [...loginApi, ...portalApi]);
+function filterSensitiveData(data: unknown) {
+  if (data instanceof Object) {
+    return Object.fromEntries(
+      Object.entries(data).map(([key, value]) => {
+        return [
+          key,
+          [/password/i, /key/i, /token/i, /secret/i].some((reg) =>
+            reg.test(key),
+          )
+            ? '************'
+            : value,
+        ];
+      }),
+    );
+  }
+  return data;
+}
+
+function pluginLogger(logger: Logger): ZodiosPlugin {
+  return {
+    request: async (_api, config) => {
+      logger.debug(
+        `[winkerApi] ${config.method || ''} ${config.baseURL || ''}${
+          config.url || ''
+        }`,
+        config.queries,
+        filterSensitiveData(config.data),
+      );
+      return config;
+    },
+    response: async (_api, _config, response) => {
+      return response;
+    },
+    error: async (_api, config, error) => {
+      logger.error(
+        `[winkerApi] Error on request :: ${config.method || ''} ${
+          config.baseURL || ''
+        }${config.url || ''}`,
+      );
+      return Promise.reject(error);
+    },
+  };
+}
+
+type Logger = Pick<typeof console, 'debug' | 'error' | 'info'>;
+
+export const winkerApi = new Zodios(BASE_URL, [
+  ...loginApi,
+  ...portalApi,
+  ...deviceApi,
+]);
 
 export function setupApi(session: Session, logger: Logger) {
-  winkerApi.use(pluginLogger(logger));
+  winkerApi.use(pluginErrorHandler());
   winkerApi.use(pluginApi());
+  winkerApi.use(pluginLogger(logger));
   winkerApi.use(
     pluginApiKey({
       getToken: async () => {
@@ -148,6 +240,10 @@ export function setupApi(session: Session, logger: Logger) {
             id_portal: session.portal,
           });
           session.updateFromPortal(portalResponse.portal);
+
+          logger.info(
+            `Authenticated as ${session.username} on portal ${portalResponse.portal.name}`,
+          );
         }
         return session.authToken;
       },

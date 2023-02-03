@@ -5,6 +5,11 @@
   "schema": {
     "type": "object",
     "properties": {
+      "testString": {
+        "title": "Test String",
+        "type": "string",
+        "required": false
+      },
       "username": {
         "title": "Username",
         "type": "string",
