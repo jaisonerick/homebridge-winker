@@ -1,3 +1,4 @@
+import { DeviceConfig, DEVICE_CONFIG_TYPE } from './Winker';
 import { Device as DeviceApi } from './winkerApi';
 
 export const enum LockState {
@@ -11,7 +12,7 @@ export class Device {
   constructor(
     private readonly uuidGenerator: (string) => string,
     private readonly deviceData: DeviceApi,
-    public readonly type: string,
+    public readonly deviceConfig?: DeviceConfig,
   ) {}
 
   get deviceId() {
@@ -20,6 +21,10 @@ export class Device {
 
   get model() {
     return `${this.type}-${this.deviceData.version}`;
+  }
+
+  get type() {
+    return this.deviceConfig?.type || DEVICE_CONFIG_TYPE.DOOR;
   }
 
   get serialNumber() {

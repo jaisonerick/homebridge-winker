@@ -10,11 +10,16 @@ import {
 } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { Winker, Config as WinkerConfig } from './lib/Winker';
+import {
+  Winker,
+  Config as WinkerConfig,
+  DEVICE_CONFIG_TYPE,
+} from './lib/Winker';
 import { WinkerDoor } from './devices/WinkerDoor';
 import { Device } from './lib/Device';
 import { DummyAccessory } from './devices/DummyAccessory';
 import { ThrottleError } from './lib/winkerApi';
+import { WinkerGarageDoor } from './devices/WinkerGarageDoor';
 
 interface WinkerDevice {
   updateAccessoryCharacteristic(): WinkerDevice;
@@ -155,10 +160,11 @@ export class WinkerHomebridgePlatform implements DynamicPlatformPlugin {
     );
     const accessory = existingDevice ?? this.createAccessory(device);
     switch (device.type) {
-      case 'dummy':
-        return new DummyAccessory(this, accessory);
+      case DEVICE_CONFIG_TYPE.DOOR:
+        return new WinkerDoor(this, accessory);
+      case DEVICE_CONFIG_TYPE.GARAGE_DOOR:
+        return new WinkerGarageDoor(this, accessory);
     }
-    return new WinkerDoor(this, accessory);
   }
 
   private createAccessory(device: Device) {

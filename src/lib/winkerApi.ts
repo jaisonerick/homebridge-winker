@@ -81,10 +81,15 @@ export const portalApi = makeApi([
   },
 ]);
 
+export const enum DEVICE_STATE {
+  OPEN = 'OPEN',
+  CLOSED = 'CLOSED',
+}
+
 export const device = z.object({
   id_device: z.string(),
   name_device: z.string(),
-  state: z.enum(['OPEN', 'CLOSED']),
+  state: z.enum([DEVICE_STATE.OPEN, DEVICE_STATE.CLOSED]),
   event: z.string(),
   version: z.string(),
 });
