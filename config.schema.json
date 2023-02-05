@@ -5,11 +5,6 @@
   "schema": {
     "type": "object",
     "properties": {
-      "testString": {
-        "title": "Test String",
-        "type": "string",
-        "required": false
-      },
       "username": {
         "title": "Username",
         "type": "string",
@@ -50,12 +45,14 @@
             "type": {
               "title": "Device Type",
               "type": "string",
-              "enum": ["DOOR", "GARAGE_DOOR"],
+              "enum": ["STATELESS_DOOR"],
+              "default": "STATELESS_DOOR",
               "required": true
             },
             "enable": {
               "title": "Enable device on homekit",
               "type": "boolean",
+              "default": false,
               "required": true
             }
           }
