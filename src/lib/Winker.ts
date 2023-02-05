@@ -35,7 +35,7 @@ export class Winker {
     const { clientKey, portal, username, password } = config;
     this.session = new Session(username, password, clientKey, portal);
 
-    (config.devices as DeviceConfig[]).forEach((device) => {
+    (config.devices as DeviceConfig[])?.forEach((device) => {
       this.configDevices.set(device.id, device);
     });
 
