@@ -78,7 +78,7 @@ export class StatelessDoor {
           return;
         }
 
-        this.logger.debug(
+        this.logger.info(
           `Setting target state of ${device.displayName} to ${value.toString()}`,
         );
 
@@ -93,7 +93,7 @@ export class StatelessDoor {
             try {
               await this.Winker.openDoor(device.deviceId);
 
-              this.logger.debug(
+              this.logger.info(
                 `Successfully remotely set ${device.displayName} target lock state to OPEN`,
               );
             } catch (error) {
@@ -155,12 +155,12 @@ class DoorState extends EventEmitter {
             this.TargetState = this.Characteristic.LockTargetState.SECURED;
             this.CurrentState = this.Characteristic.LockTargetState.SECURED;
 
+            this.openningPromise = undefined;
             resolve();
           }, 5000);
         }, reject);
       });
     }
-
     return this.openningPromise;
   }
 }
