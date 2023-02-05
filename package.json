@@ -28,7 +28,7 @@
     "watch": "npm run build && nodemon",
     "build": "npm run test && rimraf ./dist && tsc",
     "autofix": "eslint --cache src --fix",
-    "prepublishOnly": "npm run test && npm run build"
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "homebridge-plugin"

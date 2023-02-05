@@ -1,5 +1,8 @@
 {
   "eslint.enable": true,
   "tsserver.useLocalTsdk": true,
-  "tsserver.tsdk": "${workspaceFolder}/node_modules/typescript/lib"
+  "tsserver.tsdk": "${workspaceFolder}/node_modules/typescript/lib",
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow.json": "file:///Users/jaisonerick/code/homebridge-winker/.github/workflows/deploy-npm.yml"
+  }
 }
