@@ -5,6 +5,11 @@
   "schema": {
     "type": "object",
     "properties": {
+      "testString": {
+        "title": "Test String",
+        "type": "string",
+        "required": false
+      },
       "username": {
         "title": "Username",
         "type": "string",
@@ -24,6 +29,37 @@
         "title": "Portal",
         "type": "number",
         "required": true
+      },
+      "devices": {
+        "title": "Devices Configuration",
+        "description": "Add specific configuration to devices",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "title": "Device ID",
+              "type": "string",
+              "required": true
+            },
+            "name": {
+              "title": "Device Name",
+              "type": "string",
+              "required": true
+            },
+            "type": {
+              "title": "Device Type",
+              "type": "string",
+              "enum": ["DOOR", "GARAGE_DOOR"],
+              "required": true
+            },
+            "enable": {
+              "title": "Enable device on homekit",
+              "type": "boolean",
+              "required": true
+            }
+          }
+        }
       }
     }
   }
