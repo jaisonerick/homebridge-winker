@@ -2,7 +2,7 @@
   "name": "homebridge-winker",
   "version": "0.1.0",
   "displayName": "Homebridge Winker",
-  "description": "A short description about what your plugin does.",
+  "description": "Manage your Winker enabled building through Homebridge",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
