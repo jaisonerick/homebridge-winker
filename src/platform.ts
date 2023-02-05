@@ -9,7 +9,18 @@ import {
 } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { WinkerPlatformAccessory } from './platformAccessory';
+import {
+  Winker,
+  Config as WinkerConfig,
+  DEVICE_CONFIG_TYPE,
+} from './lib/Winker';
+import { Device } from './lib/Device';
+import { ThrottleError } from './lib/winkerApi';
+import { StatelessDoor } from './devices/StatelessDoor';
+
+interface WinkerDevice {
+  updateAccessoryCharacteristic(): WinkerDevice;
+}
 
 /**
  * HomebridgePlatform
@@ -21,113 +32,126 @@ export class WinkerHomebridgePlatform implements DynamicPlatformPlugin {
   public readonly Characteristic: typeof Characteristic =
     this.api.hap.Characteristic;
 
-  // this is used to track restored cached accessories
-  public readonly accessories: PlatformAccessory[] = [];
+  public accessories = new Map<string, PlatformAccessory>();
+  public winkerDevices = new Map<string, WinkerDevice>();
+
+  private refreshInterval?: ReturnType<typeof setInterval>;
+  private closeMonitoringTimeout?: ReturnType<typeof setTimeout>;
+
+  public readonly Winker?: Winker;
 
   constructor(
-    public readonly log: Logger,
+    public readonly logger: Logger,
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
-    this.log.debug('Finished initializing platform:', this.config.name);
+    this.logger.debug('Finished initializing platform:', this.config.name);
 
-    // When this event is fired it means Homebridge has restored all cached accessories from disk.
-    // Dynamic Platform plugins should only register new accessories after this event was fired,
-    // in order to ensure they weren't added to homebridge already. This event can also be used
-    // to start discovery of new accessories.
+    if (
+      !config.testString &&
+      config.clientKey &&
+      config.portal &&
+      config.username &&
+      config.password
+    ) {
+      this.Winker = new Winker(this, config as WinkerConfig, logger);
+    } else {
+      this.logger.error('Missing required config parameter.');
+    }
+
     this.api.on('didFinishLaunching', () => {
-      log.debug('Executed didFinishLaunching callback');
-      // run the method to discover / register your devices as accessories
-      this.discoverDevices();
+      this.logger.debug('Executed didFinishLaunching callback');
+      this.didFinishLaunching();
     });
   }
 
-  /**
-   * This function is invoked when homebridge restores cached accessories from disk at startup.
-   * It should be used to setup event handlers for characteristics and update respective values.
-   */
-  configureAccessory(accessory: PlatformAccessory) {
-    this.log.info('Loading accessory from cache:', accessory.displayName);
-
-    // add the restored accessory to the accessories cache so we can track if it has already been registered
-    this.accessories.push(accessory);
+  didFinishLaunching() {
+    this.discoverDevices().then(null, (error) => {
+      if (error instanceof Error) {
+        this.logger.error(error.message, error);
+      } else {
+        this.logger.error('Unknown error happened', error);
+      }
+    });
   }
 
-  /**
-   * This is an example method showing how to register discovered accessories.
-   * Accessories must only be registered once, previously created accessories
-   * must not be registered again to prevent "duplicate UUID" errors.
-   */
-  discoverDevices() {
-    // EXAMPLE ONLY
-    // A real plugin you would discover accessories from the local network, cloud services
-    // or a user-defined array in the platform config.
-    const exampleDevices = [
-      {
-        exampleUniqueId: 'ABCD',
-        exampleDisplayName: 'Bedroom',
-      },
-      {
-        exampleUniqueId: 'EFGH',
-        exampleDisplayName: 'Kitchen',
-      },
-    ];
+  configureAccessory(accessory: PlatformAccessory) {
+    this.logger.info('Loading accessory from cache:', accessory.displayName);
+    this.accessories.set(accessory.UUID, accessory);
+  }
 
-    // loop over the discovered devices and register each one if it has not already been registered
-    for (const device of exampleDevices) {
-      // generate a unique id for the accessory this should be generated from
-      // something globally unique, but constant, for example, the device serial
-      // number or MAC address
-      const uuid = this.api.hap.uuid.generate(device.exampleUniqueId);
+  async discoverDevices() {
+    if (!this.Winker) {
+      return;
+    }
+    try {
+      const devices = await this.Winker.getDevices();
 
-      // see if an accessory with the same uuid has already been registered and restored from
-      // the cached devices we stored in the `configureAccessory` method above
-      const existingAccessory = this.accessories.find(
-        (accessory) => accessory.UUID === uuid,
-      );
+      devices
+        .filter((device) => device.isActive)
+        .forEach((device) => {
+          this.winkerDevices.set(device.UUID, this.setupDevice(device));
+        });
+      this.cleanupAccessories();
+    } catch (error) {
+      if (error instanceof ThrottleError) {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            this.discoverDevices().then(resolve, reject);
+          }, 5000);
+        });
+      }
+      throw error;
+    }
+  }
 
-      if (existingAccessory) {
-        // the accessory already exists
-        this.log.info(
-          'Restoring existing accessory from cache:',
-          existingAccessory.displayName,
+  private setupDevice(device: Device): WinkerDevice {
+    const existingDevice = this.accessories.get(device.UUID);
+    if (existingDevice) {
+      existingDevice.context.device = device;
+      this.api.updatePlatformAccessories([existingDevice]);
+    }
+    this.logger.info(
+      `${
+        existingDevice
+          ? `Reloading ${device.type} from Winker:`
+          : `Discovered new ${device.type} from Winker:`
+      } "${device.displayName}"`,
+    );
+    const accessory = existingDevice ?? this.createAccessory(device);
+    switch (device.type) {
+      case DEVICE_CONFIG_TYPE.STATELESS_DOOR:
+        return new StatelessDoor(this, accessory);
+    }
+  }
+
+  private createAccessory(device: Device) {
+    const accessory = new this.api.platformAccessory(
+      device.displayName,
+      device.UUID,
+    );
+    accessory.context.device = device;
+    this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
+      accessory,
+    ]);
+    this.accessories.set(accessory.UUID, accessory);
+    return accessory;
+  }
+
+  private cleanupAccessories() {
+    this.logger.info('Cleaning up unusted accessories');
+    this.accessories.forEach((accessory, uuid) => {
+      if (!this.winkerDevices.has(uuid)) {
+        this.logger.info(
+          'Removing accessory:',
+          accessory.displayName,
+          accessory.UUID,
         );
-
-        // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
-        // existingAccessory.context.device = device;
-        // this.api.updatePlatformAccessories([existingAccessory]);
-
-        // create the accessory handler for the restored accessory
-        // this is imported from `platformAccessory.ts`
-        new WinkerPlatformAccessory(this, existingAccessory);
-
-        // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
-        // remove platform accessories when no longer present
-        // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
-        // this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
-      } else {
-        // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', device.exampleDisplayName);
-
-        // create a new accessory
-        const accessory = new this.api.platformAccessory(
-          device.exampleDisplayName,
-          uuid,
-        );
-
-        // store a copy of the device object in the `accessory.context`
-        // the `context` property can be used to store any data about the accessory you may need
-        accessory.context.device = device;
-
-        // create the accessory handler for the newly create accessory
-        // this is imported from `platformAccessory.ts`
-        new WinkerPlatformAccessory(this, accessory);
-
-        // link the accessory to your platform
-        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
           accessory,
         ]);
+        this.accessories.delete(uuid);
       }
-    }
+    });
   }
 }
